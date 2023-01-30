@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">BlurryKids</string>
+    <string name="output_image">Output Image</string>
+    <string name="from_camera_name">From Camera</string>
+    <string name="from_gallery_name">From Gallery</string>
+    <string name="share_text">Share</string>
+</resources>
