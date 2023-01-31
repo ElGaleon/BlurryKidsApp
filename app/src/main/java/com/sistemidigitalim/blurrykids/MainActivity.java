@@ -20,10 +20,12 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
+import android.media.Image;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -72,8 +74,6 @@ public class MainActivity extends AppCompatActivity {
 
     private AgeEstimationHelper ageEstimationHelper;
     private FaceDetector faceDetector;
-
-    private Context inContext;
 
     private Mat matImage;
 
@@ -145,7 +145,6 @@ public class MainActivity extends AppCompatActivity {
         fromCameraBtn = findViewById(R.id.camera_btn);
         fromGalleryBtn = findViewById(R.id.gallery_btn);
 
-        inContext = this;
 
         //initialization of age model
         try {
@@ -162,6 +161,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent takePicture = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+                //creating temp. image file and getting uri of that file
+                File image = createImageFile();
+                Uri photoUri = FileProvider.getUriForFile(getApplicationContext(), "com.sistemidigitalim.progetto"+".provider", image);
+                takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+
+                //starting activity
                 startActivityForResult(takePicture, IMAGE_FROM_CAMERA);
             }
         });
@@ -356,9 +361,11 @@ public class MainActivity extends AppCompatActivity {
         if (resultCode != RESULT_CANCELED) {
             switch (requestCode) {
                 case IMAGE_FROM_CAMERA:
-                    if (resultCode == RESULT_OK && data != null) {
+                    if (resultCode == RESULT_OK) {
                         //creating bitmap from image taken with camera
-                        this.inputBitmap = (Bitmap) data.getExtras().get("data");
+                        this.inputBitmap = BitmapFactory.decodeFile(currentPhotoPath);
+                        imageView.setImageBitmap(inputBitmap);
+                        imageView.setRotation(-90);
                         detectFaces(inputBitmap);
                     }
                     break;
@@ -367,9 +374,9 @@ public class MainActivity extends AppCompatActivity {
                         Uri imageUri = data.getData();
                         String[] filePathColumn = {MediaStore.Images.Media.DATA};
                         if (imageUri != null) {
-                            //imageView.setImageURI(imageUri);
                             try {
-                                this.inputBitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
+                                this.inputBitmap = rotateBitmap(MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri), 0);
+                                imageView.setImageBitmap(inputBitmap);
                                 detectFaces(inputBitmap);
                             } catch (IOException e) {
                                 e.printStackTrace();
@@ -391,7 +398,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Uri saveImage(Bitmap image) {
         //TODO - Should be processed in another thread
-        File imagesFolder = new File(getCacheDir(), "images");
+        File imagesFolder = new File(getExternalFilesDir("images"), "images");
         Uri uri = null;
         try {
             imagesFolder.mkdirs();
@@ -425,6 +432,7 @@ public class MainActivity extends AppCompatActivity {
     //method used to detect, count and identify age of faces
     private void detectFaces(Bitmap image){
         InputImage inputImage = InputImage.fromBitmap(image,0);
+
         AtomicReference<String> description = new AtomicReference<>("");
 
         //pass picture to MLKIT face detector
@@ -494,7 +502,6 @@ public class MainActivity extends AppCompatActivity {
 
                 //displaying bitmap with rectangles inside ImageView
                 imageView.setImageDrawable(new BitmapDrawable(getResources(),tempBitmap));
-
                 imageView.setImageBitmap(tempBitmap);
                 outputUri = saveImage(tempBitmap);
                 imageView.setImageURI(outputUri);
@@ -511,6 +518,7 @@ public class MainActivity extends AppCompatActivity {
             }
             resetCounter();
             imageView.setBackgroundColor(Color.TRANSPARENT);
+
 
         });
     }
@@ -542,6 +550,23 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
+    //method used to create temp. file
+    private File createImageFile(){
+        File temporaryPhotoFile = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+
+        try {
+            //creating temp. image.jpg file
+            File tempFile = File.createTempFile("image",".jpg",temporaryPhotoFile);
+
+            //getting path to that file
+            currentPhotoPath = tempFile.getAbsolutePath();
+            return tempFile;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     private void deleteImage(String filepath) {
         File fdelete = new File(filepath.toString());
         if (fdelete.exists()) {
@@ -551,6 +576,13 @@ public class MainActivity extends AppCompatActivity {
                 System.out.println("file not Deleted :" + filepath);
             }
         }
+    }
+
+    public static Bitmap rotateBitmap(Bitmap source, float angle)
+    {
+        Matrix matrix = new Matrix();
+        matrix.postRotate(angle);
+        return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
     }
 
 
