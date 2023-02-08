@@ -9,5 +9,5 @@ Available for Android devices.
 ![Result with two subjects](/images/fat_son.jpg)
 ---
 ### Authors
-[Christian Galeone](https://github.com/ElGaleon)
-[Gianmiriano Porrazzo](https://github.com/cronoimpius)
+- [Christian Galeone](https://github.com/ElGaleon)
+- [Gianmiriano Porrazzo](https://github.com/cronoimpius)
